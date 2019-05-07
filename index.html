@@ -38,7 +38,7 @@
 		<script src="js/WebGL.js"></script>
 		<script src="js/OrbitControls.js"></script>
 
-		<!-- <script src="js/Cloth.js"></script> -->
+		<script src="js/Cloth.js"></script>
 
 		<script>
 			// HI TIFFANY / ASHLEY U GUYS SHOULD EDIT THESE
@@ -92,7 +92,7 @@
 
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0xcce0ff );
-				scene.fog = new THREE.Fog( 0xcce0ff, 500, 10000 );
+				// scene.fog = new THREE.Fog( 0xcce0ff, 500, 10000 );
 
 				// camera
 
@@ -114,7 +114,7 @@
 
 				// cloth geometry
 
-				clothGeometry = new THREE.BoxBufferGeometry(10, 10, 10);
+				clothGeometry = new THREE.BoxGeometry(cloth.w, cloth.h, cloth.d, 2, 2, 2);
 				
 				let uniforms = {
 					colorB: {type: 'vec3', value: new THREE.Color(0xACB6E5)},
@@ -126,6 +126,12 @@
 					vertexShader: vertexShader(),
 				})
 
+				// var wireframe = new THREE.WireframeGeometry(clothGeometry);
+				// var line = new THREE.LineSegments(wireframe);
+				// line.material.depthTest = false;
+				// line.material.opacity = 0.25;
+				// line.material.transparent = true;
+				// scene.add(line);
 				// cloth mesh
 
 				object = new THREE.Mesh( clothGeometry, material);
@@ -138,8 +144,8 @@
 
 				var groundMaterial = new THREE.MeshLambertMaterial();
 
-				var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 20000, 20000 ), groundMaterial );
-				mesh.position.y = - 250;
+				var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 1000, 1000 ), groundMaterial );
+				mesh.position.y = - 20;
 				mesh.rotation.x = - Math.PI / 2;
 				mesh.receiveShadow = true;
 				scene.add( mesh );
@@ -161,7 +167,7 @@
 				// controls
 				var controls = new THREE.OrbitControls( camera, renderer.domElement );
 				controls.maxPolarAngle = Math.PI * 0.5;
-				controls.minDistance = 50;
+				controls.minDistance = 5;
 				controls.maxDistance = 5000;
 
 				window.addEventListener( 'resize', onWindowResize, false );
@@ -181,10 +187,8 @@
 
 				requestAnimationFrame( animate );
 
-
-				// comment this out to stop rotation
-				object.rotation.x += 0.01;
-				object.rotation.y += 0.01;
+				var time = Date.now();
+				// simulate( time );
 				render();
 
 			}
@@ -193,8 +197,20 @@
 
 				// do verlet integration
 
+				// var p = cloth.particles;
+				// for ( var i = 0, il = p.length; i < il; i ++ ) {
+				// 	var v = p[ i ].position;
+				// 	clothGeometry.attributes.position.setXYZ( i, v.x, v.y, v.z );
+				// }
+				// clothGeometry.attributes.position.needsUpdate = true;
+				// clothGeometry.computeVertexNormals();
+				// for (var i = 0; i < clothGeometry.vertices.length; i++) {
+				// 	clothGeometry.vertices[i].setX(clothGeometry.vertices[i].x + 1);
+				// 	clothGeometry.vertices[i].setY(clothGeometry.vertices[i].y + 1);
+				// 	clothGeometry.vertices[i].setZ(clothGeometry.vertices[i].z + 1);
+				// }
+				// clothGeometry.verticesNeedUpdate = true;
 				renderer.render( scene, camera );
-
 			}
 
 		</script>
