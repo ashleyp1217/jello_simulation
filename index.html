@@ -114,32 +114,115 @@
 
 				// cloth geometry
 
-				clothGeometry = new THREE.BoxGeometry(cloth.w, cloth.h, cloth.d, 2, 2, 2);
+				// clothGeometry = new THREE.BoxGeometry(cloth.w, cloth.h, cloth.d, 2, 2, 2);
 				
-				let uniforms = {
-					colorB: {type: 'vec3', value: new THREE.Color(0xACB6E5)},
-					colorA: {type: 'vec3', value: new THREE.Color(0x74ebd5)}
-				}
-				let material =  new THREE.ShaderMaterial({
-					uniforms: uniforms,
-					fragmentShader: fragmentShader(),
-					vertexShader: vertexShader(),
-				})
+				// let uniforms = {
+				// 	colorB: {type: 'vec3', value: new THREE.Color(0xACB6E5)},
+				// 	colorA: {type: 'vec3', value: new THREE.Color(0x74ebd5)}
+				// }
+				// let material =  new THREE.ShaderMaterial({
+				// 	uniforms: uniforms,
+				// 	fragmentShader: fragmentShader(),
+				// 	vertexShader: vertexShader(),
+				// })
 
-				// var wireframe = new THREE.WireframeGeometry(clothGeometry);
-				// var line = new THREE.LineSegments(wireframe);
-				// line.material.depthTest = false;
-				// line.material.opacity = 0.25;
-				// line.material.transparent = true;
-				// scene.add(line);
-				// cloth mesh
+				// // var wireframe = new THREE.WireframeGeometry(clothGeometry);
+				// // var line = new THREE.LineSegments(wireframe);
+				// // line.material.depthTest = false;
+				// // line.material.opacity = 0.25;
+				// // line.material.transparent = true;
+				// // scene.add(line);
+				// // cloth mesh
 
-				object = new THREE.Mesh( clothGeometry, material);
-				object.position.set( 0, 0, 0 );
-				object.castShadow = true;
-				scene.add( object );
+				// object = new THREE.Mesh( clothGeometry, material);
+				// object.position.set( 0, 0, 0 );
+				// object.castShadow = true;
+				// scene.add( object );
 
-			
+				let xSize = 3;
+let ySize = 4;
+let zSize = 5;
+let n = xSize * ySize * zSize;
+
+let geometry = new THREE.BufferGeometry();
+
+function mapTo3D(i) {
+	let z = Math.floor(i / (xSize * ySize));
+	i -= z * xSize * ySize;
+	let y = Math.floor(i / xSize);
+	let x = i % xSize;
+	return { x: x, y: y, z: z };
+}
+
+function mapFrom3D(x, y, z) {
+	return x + y * xSize + z * xSize * ySize;
+}
+
+let positions = [];
+for (let i = 0; i < n; i++) {
+	let p = mapTo3D(i);
+	positions.push((p.x - xSize / 2) / xSize);
+	positions.push((p.y - ySize / 2) / ySize);
+	positions.push((p.z - zSize / 2) / zSize);
+}
+let positionAttribute = new THREE.Float32BufferAttribute(positions, 3);
+geometry.addAttribute("position", positionAttribute);
+
+let indexPairs = [];
+for (let i = 0; i < n; i++) {
+	let p = mapTo3D(i);
+	if (p.x + 1 < xSize) {
+		indexPairs.push(i);
+		indexPairs.push(mapFrom3D(p.x + 1, p.y, p.z));
+	}
+	if (p.y + 1 < ySize) {
+		indexPairs.push(i);
+		indexPairs.push(mapFrom3D(p.x, p.y + 1, p.z));
+	}
+	if (p.z + 1 < zSize) {
+		indexPairs.push(i);
+		indexPairs.push(mapFrom3D(p.x, p.y, p.z + 1));
+	}
+}
+console.log(indexPairs);
+
+geometry.setIndex(indexPairs);
+let lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial());
+// scene.add(lines);
+
+let triangles = [];
+for (let i = 0; i < n; i++) {
+	let p = mapTo3D(i);
+	if (p.x + 1 < xSize && p.y + 1 < ySize) {
+		triangles.push(i);
+		triangles.push(mapFrom3D(p.x + 1, p.y, p.z));
+		triangles.push(mapFrom3D(p.x, p.y + 1, p.z));
+	}
+	if (p.y + 1 < ySize && p.z + 1 < zSize) {
+		triangles.push(i);
+		triangles.push(mapFrom3D(p.x, p.y + 1, p.z));
+		triangles.push(mapFrom3D(p.x, p.y, p.z + 1));
+	}
+	if (p.x + 1 < xSize && p.z + 1 < zSize) {
+		triangles.push(i);
+		triangles.push(mapFrom3D(p.x + 1, p.y, p.z));
+		triangles.push(mapFrom3D(p.x, p.y, p.z + 1));
+	}
+}
+console.log(triangles);
+
+let cube = new THREE.BufferGeometry();
+let tripos = new THREE.Float32BufferAttribute(positions, 3);
+geometry.addAttribute("position", positionAttribute);
+cube.setIndex(triangles);
+let m = new THREE.Mesh(cube,new THREE.MeshPhongMaterial( { color: 0xFFFFFF } ));
+m.castShadow = true;
+                m.receiveShadow = true;
+                m.frustumCulled = false;
+scene.add(m);
+
+// scene.add(cube);
+
 				// ground
 
 				var groundMaterial = new THREE.MeshLambertMaterial();

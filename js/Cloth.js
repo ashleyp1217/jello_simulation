@@ -140,7 +140,10 @@ function Cloth( w, h, d) {
 	for ( z = 0; z < d; z ++ ) {
 		for ( y = 0; y < h;  y++ ) {
 			for (x = 0; x < w; x ++) {
-				console.log("Count: " + count, "Index: " + index(x, y, z), x, y, z);
+				// console.log("Count: " + count, "Index: " + index(x, y, z), x, y, z);
+				console.log(particles)
+				console.log(x / w);
+
 				particles.push(
 					new Particle( x / w, y / h, z / d, MASS )
 				);
@@ -236,6 +239,7 @@ function simulate( time ) {
 		particle.integrate( TIMESTEP_SQ );
 
 	}
+
 
 	// Start Constraints
 
