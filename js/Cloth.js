@@ -15,20 +15,18 @@ var DRAG = 1 - DAMPING;
 var MASS = 0.1;
 var restDistance = 25;
 
-var xSegs = 3;
-var ySegs = 3;
-var zSegs = 3;
+var xSegs = 10;
+var ySegs = 10;
 
-var clothFunction = cube(restDistance * xSegs, restDistance * ySegs, restDistance * zSegs);
+var clothFunction = plane( restDistance * xSegs, restDistance * ySegs );
 
-var cloth = new Cloth( xSegs, ySegs, zSegs);
+var cloth = new Cloth( xSegs, ySegs );
 
 var GRAVITY = 981 * 1.4;
 var gravity = new THREE.Vector3( 0, - GRAVITY, 0 ).multiplyScalar( MASS );
 
 
-var TIMESTEP = 10 / 1000;
-// var TIMESTEP = 1;
+var TIMESTEP = 18 / 1000;
 var TIMESTEP_SQ = TIMESTEP * TIMESTEP;
 
 var pins = [];
@@ -38,18 +36,21 @@ var wind = true;
 var windStrength = 2;
 var windForce = new THREE.Vector3( 0, 0, 0 );
 
+var ballPosition = new THREE.Vector3( 0, - 45, 0 );
+var ballSize = 60; //40
+
 var tmpForce = new THREE.Vector3();
 
 var lastTime;
 
 
-function cube( width, height, depth) {
+function plane( width, height ) {
 
-	return function (t, u, v, target ) {
+	return function ( u, v, target ) {
 
-		var x = (t - 0.5) * width;
-		var y = ( u + 0.5 ) * height;
-		var z = ( v - 0.5) * depth;
+		var x = ( u - 0.5 ) * width;
+		var y = ( v + 0.5 ) * height;
+		var z = 0;
 
 		target.set( x, y, z );
 
@@ -70,9 +71,9 @@ function Particle( x, y, z, mass ) {
 
 	// init
 
-	clothFunction( x, y, z, this.position ); // position
-	clothFunction( x, y, z, this.previous ); // previous
-	clothFunction( x, y, z, this.original );
+	clothFunction( x, y, this.position ); // position
+	clothFunction( x, y, this.previous ); // previous
+	clothFunction( x, y, this.original );
 
 }
 
@@ -119,66 +120,72 @@ function satisfyConstraints( p1, p2, distance ) {
 }
 
 
-function Cloth( w, h, d) {
+function Cloth( w, h ) {
 
 	w = w || 10;
 	h = h || 10;
-	d = d || 10;
-
 	this.w = w;
 	this.h = h;
-	this.d = d;
 
 	var particles = [];
 	var constraints = [];
 
-	var x, y, z;
+	var u, v;
 
 	// Create particles
+	for ( v = 0; v <= h; v ++ ) {
 
-	var count = 0;
-	for ( z = 0; z < d; z ++ ) {
-		for ( y = 0; y < h;  y++ ) {
-			for (x = 0; x < w; x ++) {
-				// console.log("Count: " + count, "Index: " + index(x, y, z), x, y, z);
-				console.log(particles)
-				console.log(x / w);
+		for ( u = 0; u <= w; u ++ ) {
 
-				particles.push(
-					new Particle( x / w, y / h, z / d, MASS )
-				);
-				count ++;
-			}
+			particles.push(
+				new Particle( u / w, v / h, 0, MASS )
+			);
+
 		}
+
 	}
-	
+
 	// Structural
 
-	for ( z = 0; z < d; z ++ ) {
-		for ( y = 0; y < h;  y++ ) {
-			for (x = 0; x < w; x ++) {
-				if (x < w - 1) {
-					console.log(x, y, z);
-					console.log(index(x, y, z));
-					constraints.push( [
-						particles[index(x, y, z)],
-						particles[index(x + 1, y, z)]
-					]);
-				}
-				if (y < h - 1) {
-					constraints.push([
-						particles[ index(x, y, z)],
-						particles[index(x, y + 1, z)]
-					]);
-				}
-				if (z < d - 1) {
-					constraints.push([
-						particles[index(x, y, z)],
-						particles[index(x, y, z + 1)]
-					])
-				}
-			}
+	for ( v = 0; v < h; v ++ ) {
+
+		for ( u = 0; u < w; u ++ ) {
+
+			constraints.push( [
+				particles[ index( u, v ) ],
+				particles[ index( u, v + 1 ) ],
+				restDistance
+			] );
+
+			constraints.push( [
+				particles[ index( u, v ) ],
+				particles[ index( u + 1, v ) ],
+				restDistance
+			] );
+
 		}
+
+	}
+
+	for ( u = w, v = 0; v < h; v ++ ) {
+
+		constraints.push( [
+			particles[ index( u, v ) ],
+			particles[ index( u, v + 1 ) ],
+			restDistance
+
+		] );
+
+	}
+
+	for ( v = h, u = 0; u < w; u ++ ) {
+
+		constraints.push( [
+			particles[ index( u, v ) ],
+			particles[ index( u + 1, v ) ],
+			restDistance
+		] );
+
 	}
 
 
@@ -211,8 +218,9 @@ function Cloth( w, h, d) {
 	this.particles = particles;
 	this.constraints = constraints;
 
-	function index( x, y, z) {
-		return x + (y + d * z) * w;
+	function index( u, v ) {
+
+		return u + v * ( w + 1 );
 
 	}
 
@@ -231,6 +239,32 @@ function simulate( time ) {
 
 	var i, il, particles, particle, pt, constraints, constraint;
 
+	// Aerodynamics forces
+
+	if ( wind ) {
+
+		var indx;
+		var normal = new THREE.Vector3();
+		var indices = clothGeometry.index;
+		var normals = clothGeometry.attributes.normal;
+
+		particles = cloth.particles;
+
+		for ( i = 0, il = indices.count; i < il; i += 3 ) {
+
+			for ( j = 0; j < 3; j ++ ) {
+
+				indx = indices.getX( i + j );
+				normal.fromBufferAttribute( normals, indx )
+				tmpForce.copy( normal ).normalize().multiplyScalar( normal.dot( windForce ) );
+				particles[ indx ].addForce( tmpForce );
+
+			}
+
+		}
+
+	}
+
 	for ( particles = cloth.particles, i = 0, il = particles.length; i < il; i ++ ) {
 
 		particle = particles[ i ];
@@ -240,44 +274,68 @@ function simulate( time ) {
 
 	}
 
-
 	// Start Constraints
 
-	// console.log(cloth.constraints);
-	// constraints = cloth.constraints;
-	// il = constraints.length;
+	constraints = cloth.constraints;
+	il = constraints.length;
 
-	// for ( i = 0; i < il; i ++ ) {
+	for ( i = 0; i < il; i ++ ) {
 
-	// 	constraint = constraints[ i ];
-	// 	satisfyConstraints( constraint[ 0 ], constraint[ 1 ], constraint[ 2 ] );
+		constraint = constraints[ i ];
+		console.log(constraint);
+		satisfyConstraints( constraint[ 0 ], constraint[ 1 ], constraint[ 2 ] );
 
-	// }
+	}
 
-	// // Floor Constraints
+	// Ball Constraints
 
-	for ( particles = cloth.particles, i = 0, il = particles.length; i < il; i ++ ) {
+	ballPosition.z = - Math.sin( Date.now() / 600 ) * 90; //+ 40;
+	ballPosition.x = Math.cos( Date.now() / 400 ) * 70;
 
-		particle = particles[ i ];
-		pos = particle.position;
-		if ( pos.y < - 20 ) {
+	if ( sphere.visible ) {
 
-			pos.y = -19;
+		for ( particles = cloth.particles, i = 0, il = particles.length; i < il; i ++ ) {
+
+			particle = particles[ i ];
+			var pos = particle.position;
+			diff.subVectors( pos, ballPosition );
+			if ( diff.length() < ballSize ) {
+
+				// collided
+				diff.normalize().multiplyScalar( ballSize );
+				pos.copy( ballPosition ).add( diff );
+
+			}
 
 		}
 
 	}
 
-	// // Pin Constraints
 
-	// for ( i = 0, il = pins.length; i < il; i ++ ) {
+	// Floor Constraints
 
-	// 	var xy = pins[ i ];
-	// 	var p = particles[ xy ];
-	// 	p.position.copy( p.original );
-	// 	p.previous.copy( p.original );
+	for ( particles = cloth.particles, i = 0, il = particles.length; i < il; i ++ ) {
 
-	// }
+		particle = particles[ i ];
+		pos = particle.position;
+		if ( pos.y < - 250 ) {
+
+			pos.y = - 250;
+
+		}
+
+	}
+
+	// Pin Constraints
+
+	for ( i = 0, il = pins.length; i < il; i ++ ) {
+
+		var xy = pins[ i ];
+		var p = particles[ xy ];
+		p.position.copy( p.original );
+		p.previous.copy( p.original );
+
+	}
 
 
 }

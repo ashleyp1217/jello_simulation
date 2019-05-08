@@ -39,7 +39,83 @@
 		<script src="js/OrbitControls.js"></script>
 
 		<script>
-      
+            // graphics variables
+            var scene, camera, renderer;
+            var controls;
+            var clock, time;
+
+            // jello variables
+            var xSize = 3;
+            var ySize = 3;
+            var zSize = 3;
+            var n = xSize * ySize * zSize; // number of point masses
+            var geometry = new THREE.BufferGeometry();
+            geometry.dynamic = true;
+            var positions = []; // the positions of point masses in strides of 3
+            var particles = []; // particles wrapper class
+            var springs = []; // springs wrapper class
+
+            // physics variables
+            var GRAVITY = new THREE.Vector3(0, -.98, 0); // -9.8 m/s^2
+            var TIMESTEP = 1 / 60; // time interval in seconds between each update (60 fps => 1 / 60 seconds per update)
+            var MASS = 0.1; // mass of each point mass
+            var DAMPING = 0.04; // simulate energy loss
+            var K = 3; // spring restoring force
+            var restDistance = 1 / xSize; // spring resting length
+
+            // this is just a wrapper class for the Points so we can store previous positions and forces more easily
+            function Particle(x, y, z, mass) {
+                this.position = new THREE.Vector3();
+                this.previous = new THREE.Vector3();
+                this.original = new THREE.Vector3();
+                this.forces = new THREE.Vector3(0, 0, 0); // forces on particle
+                this.mass = mass;
+
+                this.position.set(x, y, z);
+                this.previous.set(x, y, z);
+                this.original.set(x, y, z);
+            }
+
+            // spring wrapper class
+            function Spring(p1, p2, restDistance) {
+                this.p1 = p1;
+                this.p2 = p2;
+                this.restDistance = restDistance;
+            }
+
+            // add force to a particle
+            Particle.prototype.addForce = function (force) {
+                this.forces.add(force);
+            }
+
+            // integrate forces
+            Particle.prototype.integrate = function (timesq) {
+                let temp = new THREE.Vector3();
+                temp.subVectors(this.position, this.previous);
+                temp.multiplyScalar(1 - DAMPING).add(this.position);
+                let a = this.forces.multiplyScalar(1 / this.mass);
+                temp.add(a.multiplyScalar(timesq));
+
+                this.previous = this.position;
+                this.position = temp;
+                this.forces.set(0, 0, 0); // reset forces
+            }
+            
+            function satisfyConstraints( p1, p2, distance ) {
+                let diff = new THREE.Vector3();
+                diff.subVectors( p2.position, p1.position );
+                var currentDist = diff.length();
+                if ( currentDist === 0 ) return; // prevents division by 0
+                currentDist = K * currentDist - distance;
+
+                var correction = diff.multiplyScalar(currentDist);
+                var correctionHalf = correction.multiplyScalar( 0.5 );
+                p1.addForce( correctionHalf );
+                correctionHalf.negate() // add inverse
+                p2.addForce(correctionHalf);
+
+            }
+
             function mapTo3D(i) {
                 let z = Math.floor(i / (xSize * ySize));
                 i -= z * xSize * ySize;
@@ -52,129 +128,180 @@
                 return x + y * xSize + z * xSize * ySize;
             }
 
-            let scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000000, 0.6);
-            let camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight);
-            camera.position.set(0.6, 0.6, 0.6);
-            camera.lookAt(scene.position);
-            let renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            let clock = new THREE.Clock();
-            let time = 0;
-            document.body.appendChild(renderer.domElement);
+            function init() {
+                scene = new THREE.Scene();
+                scene.fog = new THREE.FogExp2(0x000000, 0.6);
+                camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight);
+                camera.position.set(1.5, 1.5, 1.5);
+                camera.lookAt(scene.position);
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                clock = new THREE.Clock();
+                time = 0;
+                document.body.appendChild(renderer.domElement);
+                controls = new THREE.OrbitControls( camera, renderer.domElement );
+                controls.maxPolarAngle = Math.PI * 0.5;
+                
+                // let groundMaterial = new THREE.MeshLambertMaterial();
+
+				// let mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 100, 100 ), groundMaterial );
+				// mesh.position.y = - 10;
+				// mesh.rotation.x = - Math.PI / 2;
+				// mesh.receiveShadow = true;
+				// scene.add( mesh );
+            }            
         
-            let xSize = 3;
-            let ySize = 3;
-            let zSize = 3;
-            let n = xSize * ySize * zSize;
+            function generatePoints() { // create the point masses for the structure
+                for (let i = 0; i < n; i++) {
+                    let p = mapTo3D(i);
+                    positions.push(p.x / xSize);
+                    positions.push(p.y / ySize);
+                    positions.push(p.z / zSize);
 
-            let geometry = new THREE.BufferGeometry();
-            geometry.dynamic = true;
-
-            let positions = [];
-            
-            for (let i = 0; i < n; i++) {
-            let p = mapTo3D(i);
-                positions.push((p.x - xSize / 2) / xSize);
-                positions.push((p.y - ySize / 2) / ySize);
-                positions.push((p.z - zSize / 2) / zSize);
+                    particles.push(
+                        new Particle(p.x / xSize, p.y / ySize, p.z / zSize, MASS)
+                    );
+                }
+                let positionAttribute = new THREE.Float32BufferAttribute(positions, 3);
+                geometry.addAttribute("position", positionAttribute);
             }
             
-            let positionAttribute = new THREE.Float32BufferAttribute(positions, 3);
-            geometry.addAttribute("position", positionAttribute);
-            let points = new THREE.Points(
-                geometry,
-                new THREE.PointsMaterial({ size: 0.04 })
-            );
-            scene.add(points);
-
-            let indexPairs = [];
-            for (let i = 0; i < n; i++) {
-            let p = mapTo3D(i);
-                if (p.x + 1 < xSize) {
-                    indexPairs.push(i);
-                    indexPairs.push(mapFrom3D(p.x + 1, p.y, p.z));
-                }
-                if (p.y + 1 < ySize) {
-                    indexPairs.push(i);
-                    indexPairs.push(mapFrom3D(p.x, p.y + 1, p.z));
-                }
-                if (p.z + 1 < zSize) {
-                    indexPairs.push(i);
-                    indexPairs.push(mapFrom3D(p.x, p.y, p.z + 1));
-                }
+            function drawPoints() { // draw the point masses
+                let points = new THREE.Points(
+                    geometry,
+                    new THREE.PointsMaterial({ size: 0.04 })
+                );
+                scene.add(points);
             }
-            geometry.setIndex(indexPairs);
-            let lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial());
-            lines.frustumCulled = false;
-            scene.add(lines);
-
-            let triangles = [];
-            for (let i = 0; i < n; i++) {
+            
+            function drawWireframe() { // draw lines connecting the masses
+                let indexPairs = [];
+                for (let i = 0; i < n; i++) {
                 let p = mapTo3D(i);
-                if (p.x + 1 < xSize && p.y + 1 < ySize) {
-                    triangles.push(i);
-                    triangles.push(mapFrom3D(p.x + 1, p.y, p.z));
-                    triangles.push(mapFrom3D(p.x, p.y + 1, p.z));
+                    if (p.x + 1 < xSize) {
+                        indexPairs.push(i);
+                        indexPairs.push(mapFrom3D(p.x + 1, p.y, p.z));
+                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x + 1, p.y, p.z)], restDistance));
+                    }
+                    if (p.y + 1 < ySize) {
+                        indexPairs.push(i);
+                        indexPairs.push(mapFrom3D(p.x, p.y + 1, p.z));
+                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x, p.y + 1, p.z)], restDistance));
+
+                    }
+                    if (p.z + 1 < zSize) {
+                        indexPairs.push(i);
+                        indexPairs.push(mapFrom3D(p.x, p.y, p.z + 1));
+                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x, p.y, p.z + 1)], restDistance));
+
+                    }
                 }
-                if (p.x > 0 && p.y > 0) {
-                    triangles.push(i);
-                    triangles.push(mapFrom3D(p.x - 1, p.y, p.z));
-                    triangles.push(mapFrom3D(p.x, p.y - 1, p.z));
+                geometry.setIndex(indexPairs);
+                let lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial());
+                lines.frustumCulled = false;
+                scene.add(lines);
+            }
+           
+            function drawMesh() { // draw mesh over the whole thing
+                let triangles = [];
+                for (let i = 0; i < n; i++) {
+                    let p = mapTo3D(i);
+                    if (p.x + 1 < xSize && p.y + 1 < ySize) {
+                        triangles.push(i);
+                        triangles.push(mapFrom3D(p.x + 1, p.y, p.z));
+                        triangles.push(mapFrom3D(p.x, p.y + 1, p.z));
+                    }
+                    if (p.x > 0 && p.y > 0) {
+                        triangles.push(i);
+                        triangles.push(mapFrom3D(p.x - 1, p.y, p.z));
+                        triangles.push(mapFrom3D(p.x, p.y - 1, p.z));
+                    }
+                    
+                    if (p.y + 1 < ySize && p.z + 1 < zSize) {
+                        triangles.push(i);
+                        triangles.push(mapFrom3D(p.x, p.y + 1, p.z));
+                        triangles.push(mapFrom3D(p.x, p.y, p.z + 1));
+                    }
+                    if (p.y > 0 && p.z > 0) {
+                        triangles.push(i);
+                        triangles.push(mapFrom3D(p.x, p.y - 1, p.z));
+                        triangles.push(mapFrom3D(p.x, p.y, p.z - 1));
+                    }
+                    
+                    if (p.x + 1 < xSize && p.z + 1 < zSize) {
+                        triangles.push(i);
+                        triangles.push(mapFrom3D(p.x + 1, p.y, p.z));
+                        triangles.push(mapFrom3D(p.x, p.y, p.z + 1));
+                    }
+                    if (p.x > 0 && p.z > 0) {
+                        triangles.push(i);
+                        triangles.push(mapFrom3D(p.x - 1, p.y, p.z));
+                        triangles.push(mapFrom3D(p.x, p.y, p.z - 1));
+                    }
                 }
-                
-                if (p.y + 1 < ySize && p.z + 1 < zSize) {
-                    triangles.push(i);
-                    triangles.push(mapFrom3D(p.x, p.y + 1, p.z));
-                    triangles.push(mapFrom3D(p.x, p.y, p.z + 1));
-                }
-                if (p.y > 0 && p.z > 0) {
-                    triangles.push(i);
-                    triangles.push(mapFrom3D(p.x, p.y - 1, p.z));
-                    triangles.push(mapFrom3D(p.x, p.y, p.z - 1));
-                }
-                
-                if (p.x + 1 < xSize && p.z + 1 < zSize) {
-                    triangles.push(i);
-                    triangles.push(mapFrom3D(p.x + 1, p.y, p.z));
-                    triangles.push(mapFrom3D(p.x, p.y, p.z + 1));
-                }
-                if (p.x > 0 && p.z > 0) {
-                    triangles.push(i);
-                    triangles.push(mapFrom3D(p.x - 1, p.y, p.z));
-                    triangles.push(mapFrom3D(p.x, p.y, p.z - 1));
-                }
+
+                geometry.setIndex(triangles);
+                let mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color: 'crimson', side: THREE.DoubleSide}));
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                mesh.frustumCulled = false;
+
+                scene.add(mesh);
             }
 
-            geometry.setIndex(triangles);
-            let mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color: 'crimson', side: THREE.DoubleSide}));
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            mesh.frustumCulled = false;
+            function simulate(delta) {
+                if (delta < TIMESTEP) return;
+                
+                // apply gravity
+                for (let i = 0; i < n; i++) {
+                    let copy = new THREE.Vector3().copy(GRAVITY);
+                    particles[i].addForce(copy.multiplyScalar(particles[i].mass)); // need to make a copy                    
+                }
 
-            scene.add(mesh);
-            // let mesh = new THREE.ConvexGeometry(points);
-            // scene.add(mesh);
-			var controls = new THREE.OrbitControls( camera, renderer.domElement );
-				controls.maxPolarAngle = Math.PI * 0.5;
-				// controls.minDistance = 5;
-				// controls.maxDistance = 5000;
+                // apply springs
+
+                // for (let i = 0; i < springs.length; i++) {
+                //     let spring = springs[i];
+                //     satisfyConstraints(spring.p1, spring.p2, spring.restDistance);
+                // }
+
+                for (let i = 0; i < n; i++) {
+                    particles[i].integrate(delta * delta);                 
+                }
+
+                // // floor constraints
+                // for (let i = 0; i < n; i++) {
+                //     let pos = particles[i].position;
+                //     if (pos.y < -10) {
+                //         pos.y = -10;
+                //     }                
+                // }
+
+                // satisfy constraints
+            }
             
             function render() {
                 requestAnimationFrame(render);
                 time += clock.getDelta();
+                simulate(time);
                 for (let i = 0; i < n; i++) {
-                    let p = mapTo3D(i);
-                    let a = p.x + p.y + p.z;
-                    let b = 0.001 * Math.sin(5 * time + a);
-                    geometry.attributes.position.array[3 * i + 0] += b;
-                    geometry.attributes.position.array[3 * i + 1] += b;
-                    geometry.attributes.position.array[3 * i + 2] += b;
+                    let pos = particles[i].position;
+                    console.log(pos);
+                    geometry.attributes.position.array[3 * i + 0] = pos.x;
+                    geometry.attributes.position.array[3 * i + 1] = pos.y;
+                    geometry.attributes.position.array[3 * i + 2] = pos.z;
                 }
                 geometry.attributes.position.needsUpdate = true;
                 renderer.render(scene, camera);
             }
 
+            // main code
+
+            init();
+            generatePoints();
+            drawPoints();
+            drawWireframe();
+            drawMesh();
             render();
 		</script>
 	</body>
