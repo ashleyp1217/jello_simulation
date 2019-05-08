@@ -58,9 +58,9 @@
             // physics variables
             var GRAVITY = new THREE.Vector3(0, -.98, 0); // -9.8 m/s^2
             var TIMESTEP = 1/60; // time interval in seconds between each update (60 fps => 1 / 60 seconds per update)
-            var MASS = 0.1; // mass of each point mass
+            var MASS = 0.01; // mass of each point mass
             var DAMPING = 0.04; // simulate energy loss
-            var K = 0.5; // spring restoring force
+            var K = 1; // spring restoring force
             var restDistance = 1 / xSize; // spring resting length
 
             // this is just a wrapper class for the Points so we can store previous positions and forces more easily
@@ -145,7 +145,7 @@ p1.addForce( correctionHalf );
                 scene = new THREE.Scene();
                 // scene.fog = new THREE.FogExp2(0x000000, 0.6);
                 camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight);
-                camera.position.set(1.5, 1.5, 1.5);
+                camera.position.set(-2, 1.5, -1.5);
                 camera.lookAt(scene.position);
                 renderer = new THREE.WebGLRenderer({ antialias: true });
                 renderer.setSize(window.innerWidth, window.innerHeight);
