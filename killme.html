@@ -53,7 +53,6 @@
             geometry.dynamic = true;
             var positions = []; // the positions of point masses in strides of 3
             var particles = []; // particles wrapper class
-            var springs = []; // springs wrapper class
 
             // physics variables
             var GRAVITY = new THREE.Vector3(0, -.98, 0); // -9.8 m/s^2
@@ -61,7 +60,6 @@
             var MASS = 0.1; // mass of each point mass
             var DAMPING = 0.04; // simulate energy loss
             var K = 3; // spring restoring force
-            var restDistance = 1 / xSize; // spring resting length
 
             // this is just a wrapper class for the Points so we can store previous positions and forces more easily
             function Particle(x, y, z, mass) {
@@ -74,13 +72,6 @@
                 this.position.set(x, y, z);
                 this.previous.set(x, y, z);
                 this.original.set(x, y, z);
-            }
-
-            // spring wrapper class
-            function Spring(p1, p2, restDistance) {
-                this.p1 = p1;
-                this.p2 = p2;
-                this.restDistance = restDistance;
             }
 
             // add force to a particle
@@ -106,13 +97,11 @@
                 diff.subVectors( p2.position, p1.position );
                 var currentDist = diff.length();
                 if ( currentDist === 0 ) return; // prevents division by 0
-                currentDist = K * currentDist - distance;
 
-                var correction = diff.multiplyScalar(currentDist);
+                var correction = diff.multiplyScalar( 1 - distance / currentDist );
                 var correctionHalf = correction.multiplyScalar( 0.5 );
-                p1.addForce( correctionHalf );
-                correctionHalf.negate() // add inverse
-                p2.addForce(correctionHalf);
+                p1.position.addForce( correctionHalf );
+                p2.position.sub( correctionHalf );
 
             }
 
@@ -140,15 +129,7 @@
                 time = 0;
                 document.body.appendChild(renderer.domElement);
                 controls = new THREE.OrbitControls( camera, renderer.domElement );
-                controls.maxPolarAngle = Math.PI * 0.5;
-                
-                // let groundMaterial = new THREE.MeshLambertMaterial();
-
-				// let mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 100, 100 ), groundMaterial );
-				// mesh.position.y = - 10;
-				// mesh.rotation.x = - Math.PI / 2;
-				// mesh.receiveShadow = true;
-				// scene.add( mesh );
+			    controls.maxPolarAngle = Math.PI * 0.5;
             }            
         
             function generatePoints() { // create the point masses for the structure
@@ -181,19 +162,14 @@
                     if (p.x + 1 < xSize) {
                         indexPairs.push(i);
                         indexPairs.push(mapFrom3D(p.x + 1, p.y, p.z));
-                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x + 1, p.y, p.z)], restDistance));
                     }
                     if (p.y + 1 < ySize) {
                         indexPairs.push(i);
                         indexPairs.push(mapFrom3D(p.x, p.y + 1, p.z));
-                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x, p.y + 1, p.z)], restDistance));
-
                     }
                     if (p.z + 1 < zSize) {
                         indexPairs.push(i);
                         indexPairs.push(mapFrom3D(p.x, p.y, p.z + 1));
-                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x, p.y, p.z + 1)], restDistance));
-
                     }
                 }
                 geometry.setIndex(indexPairs);
@@ -252,30 +228,13 @@
             function simulate(delta) {
                 if (delta < TIMESTEP) return;
                 
-                // apply gravity
                 for (let i = 0; i < n; i++) {
                     let copy = new THREE.Vector3().copy(GRAVITY);
-                    particles[i].addForce(copy.multiplyScalar(particles[i].mass)); // need to make a copy                    
+                    particles[i].addForce(copy.multiplyScalar(particles[i].mass)); // need to make a copy
+                    
+                    particles[i].integrate(delta * delta);
                 }
-
-                // apply springs
-
-                // for (let i = 0; i < springs.length; i++) {
-                //     let spring = springs[i];
-                //     satisfyConstraints(spring.p1, spring.p2, spring.restDistance);
-                // }
-
-                for (let i = 0; i < n; i++) {
-                    particles[i].integrate(delta * delta);                 
-                }
-
-                // // floor constraints
-                // for (let i = 0; i < n; i++) {
-                //     let pos = particles[i].position;
-                //     if (pos.y < -10) {
-                //         pos.y = -10;
-                //     }                
-                // }
+                time = 0;
 
                 // satisfy constraints
             }
