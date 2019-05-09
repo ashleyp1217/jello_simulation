@@ -30,15 +30,21 @@
 
 	<body>
 		<div id="info">Jello Simulation<br/>
-			holy fk javascript is op<br/>
+			it's raining jello!!!<br/>
 		</div>
 
 		<script src="js/three.js"></script>
 
 		<script src="js/WebGL.js"></script>
 		<script src="js/OrbitControls.js"></script>
+		<!-- <script type="text/javascript" src="dat.gui.min.js"></script> -->
+		<script type="text/javascript" src="js/dat.gui-master/build/dat.gui.min.js"></script>
 
 		<script>
+		// const dat = require('dat.gui');
+		// var gui = new dat.GUI();
+
+
             // graphics variables
             var scene, camera, renderer;
             var controls;
@@ -63,6 +69,37 @@
             var DAMPING = 0.04; // simulate energy loss
             var K = 1; // spring restoring force
             var restDistance = 1 / xSize; // spring resting length
+
+
+
+						var jellomat = new THREE.MeshBasicMaterial({
+							color: 'crimson',
+							side: THREE.DoubleSide,
+							transparent: true,
+							opacity: 0.75,
+							// lights: true
+							// envMap: beach,
+							// combine: THREE.MixOperation,
+							// reflectivity: 0.1
+						});
+
+						var gui = new dat.GUI({
+				    height : 5 * 32 - 1
+						});
+
+						var box = gui.addFolder('Jiggliness');
+						// box.add(this.GRAVITY,'y', -3.5, -.98, 0.01).name('Gravity').listen();
+						box.add(this,'MASS', 0.0, 0.01, 0.001).name('Mass').listen();
+						var params = {
+						  color: '#FF0000', // CSS string
+						};
+						gui.addColor( params, 'color' ).name('Jello Color')
+      .onChange( function() { jellomat.color.set( params.color ); } );
+
+						// box.add(this,'DAMPING', 0, 1, 0.01).name('damping').listen();
+						// box.add(this,'K', 1, 1.5, 0.1).name('k').listen();
+						box.open();
+
 
             // the wrapper class for jellos
             function SoftBody(geometry, particles, springs, id) {
@@ -138,13 +175,25 @@
             function init() {
 								texture = new THREE.TextureLoader().load( "checker.png");
 								var env = new THREE.CubeTextureLoader().load( [
-									'posx.jpg',
-									'negx.jpg',
-									'posy.jpg',
-									'negy.jpg',
-									'posz.jpg',
-									'negz.jpg'
+									'/Tantolunden6/posx.jpg',
+									'/Tantolunden6/negx.jpg',
+									'/Tantolunden6/posy.jpg',
+									'/Tantolunden6/negy.jpg',
+									'/Tantolunden6/posz.jpg',
+									'/Tantolunden6/negz.jpg'
 								] );
+								var beach = new THREE.CubeTextureLoader().load( [
+									'/NissiBeach2/posx.jpg',
+									'/NissiBeach2/negx.jpg',
+									'/NissiBeach2/posy.jpg',
+									'/NissiBeach2/negy.jpg',
+									'/NissiBeach2/posz.jpg',
+									'/NissiBeach2/negz.jpg'
+								] );
+								beach.format = THREE.RGBFormat;
+								beach.mapping = THREE.CubeReflectionMapping;
+								beach.encoding = THREE.sRGBEncoding;
+
                 scene = new THREE.Scene();
 								// fogColor = new THREE.Color(0xd3746e);
 
@@ -152,9 +201,10 @@
     						// scene.fog = new THREE.Fog(fogColor, 0.0025, 20);
                 // scene.fog = new THREE.FogExp2(0x000000, 0.6);
 								scene.background = env;
-								env.format = THREE.RGBFormat;
-								env.mapping = THREE.CubeReflectionMapping;
-								env.encoding = THREE.sRGBEncoding;
+
+								// env.format = THREE.RGBFormat;
+								// env.mapping = THREE.CubeReflectionMapping;
+								// env.encoding = THREE.sRGBEncoding;
                 camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight);
                 camera.position.set(-7, -1.5, -1);
                 // camera.lookAt(scene.position);
@@ -170,7 +220,6 @@
                 controls.maxPolarAngle = Math.PI * 0.50
 								controls.minDistance = 5;
 								controls.maxDistance = 10;
-								// controls.maxPolarAngle = 0.0;
 
 								document.addEventListener('click', onClick, false);
 								// var mouse = new THREE.Vector3( 0, 0, 0.5 );
@@ -178,9 +227,9 @@
 
                 var geometry = new THREE.PlaneBufferGeometry(20, 5);
                 var material = new THREE.MeshBasicMaterial({
-                color:'skyblue',
+                color:'white',
                 side: THREE.DoubleSide,
-								envMap: env,
+								envMap: beach,
 								combine: THREE.MixOperation,
 								reflectivity: 0.2
                 });
@@ -189,6 +238,10 @@
                 plane.rotation.x = - Math.PI / 2;
 								plane.receiveShadow = true;
                 scene.add(plane);
+								// var light = new THREE.AmbientLight( 0x4286f4);
+								var light = new THREE.AmbientLight(0x4286f4);
+								// light.position.set(0,0,0);
+								scene.add(light);
                 window.addEventListener( 'resize', onWindowResize, false );
 			}
 
@@ -315,12 +368,18 @@
                 }
 
                 geometry.setIndex(triangles);
-                let mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
-									color: 'crimson',
-									side: THREE.DoubleSide,
-									transparent: true,
-									opacity: 0.9
-								}));
+
+                // let mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+								// 	color: 'crimson',
+								// 	side: THREE.DoubleSide,
+								// 	transparent: true,
+								// 	opacity: 0.75,
+								// 	// lights: true
+								// 	envMap: env,
+								// 	combine: THREE.MixOperation,
+								// 	reflectivity: 0.1
+								// }));
+								let mesh = new THREE.Mesh(geometry,jellomat);
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
                 mesh.frustumCulled = false;
@@ -391,17 +450,6 @@
             // main code
 
             init();
-
-            // for (let i = 0; i < 5; i++) {
-            //     let softBody = new SoftBody(new THREE.BufferGeometry(), [], [], i);
-            //     softBody.geometry.dynamic = true;
-            //     generatePoints(i, i, i, softBody.geometry, softBody.particles);
-						//
-            //     drawPoints(softBody.geometry); // geometry
-            //     drawWireframe(softBody.geometry, softBody.particles, softBody.springs); // also form the springs
-            //     drawMesh(softBody.geometry);
-            //     objects.push(softBody);
-            // }
 						let main_softBody = new SoftBody(new THREE.BufferGeometry(), [], [], 0);
 						main_softBody.geometry.dynamic = true;
 						generatePoints(0, 0, 0, main_softBody.geometry, main_softBody.particles);
