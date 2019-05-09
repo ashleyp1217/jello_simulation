@@ -108,31 +108,16 @@
                 this.position = temp;
                 this.forces.set(0, 0, 0); // reset forces
             }
-            
-            // function satisfyConstraints( p1, p2, distance ) {
-            //     let diff = new THREE.Vector3();
-            //     diff.subVectors( p2.position, p1.position );
-            //     var currentDist = diff.length();
-            //     if ( currentDist === 0 ) return; // prevents division by 0
-            //     currentDist = K * currentDist - distance;
 
-            //     var correction = diff.multiplyScalar(currentDist);
-            //     console.log(correction);
-            //     var correctionHalf = correction.multiplyScalar( 0.5 );
-            //     p1.addForce( correctionHalf );
-            //     correctionHalf.negate() // add inverse
-            //     p2.addForce(correctionHalf);
-
-            // }
             function satisfyConstraints( p1, p2, distance ) {
                 let diff = new THREE.Vector3();
-diff.subVectors( p2.position, p1.position );
-var currentDist = diff.length();
-if ( currentDist === 0 ) return; // prevents division by 0
-currentDist *= K;
-var correction = diff.multiplyScalar( 1 - distance / currentDist );
-var correctionHalf = correction.multiplyScalar( 0.5 );
-p1.addForce( correctionHalf );
+								diff.subVectors( p2.position, p1.position );
+								var currentDist = diff.length();
+								if ( currentDist === 0 ) return; // prevents division by 0
+								currentDist *= K;
+								var correction = diff.multiplyScalar( 1 - distance / currentDist );
+								var correctionHalf = correction.multiplyScalar( 0.5 );
+								p1.addForce( correctionHalf );
                 correctionHalf.negate() // add inverse
                 p2.addForce(correctionHalf);
 
@@ -150,10 +135,27 @@ p1.addForce( correctionHalf );
             }
 
             function init() {
+								texture = new THREE.TextureLoader().load( "checker.png");
+								var env = new THREE.CubeTextureLoader().load( [
+									'posx.jpg',
+									'negx.jpg',
+									'posy.jpg',
+									'negy.jpg',
+									'posz.jpg',
+									'negz.jpg'
+								] );
                 scene = new THREE.Scene();
+								// fogColor = new THREE.Color(0xd3746e);
+
+    						// scene.background = new THREE.Color(0xffffff);
+    						// scene.fog = new THREE.Fog(fogColor, 0.0025, 20);
                 // scene.fog = new THREE.FogExp2(0x000000, 0.6);
+								scene.background = env;
+								env.format = THREE.RGBFormat;
+								env.mapping = THREE.CubeReflectionMapping;
+								env.encoding = THREE.sRGBEncoding;
                 camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight);
-                camera.position.set(-2, 1.5, -1.5);
+                camera.position.set(-7, -1.5, -1);
                 camera.lookAt(scene.position);
                 renderer = new THREE.WebGLRenderer({ antialias: true });
                 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -161,19 +163,22 @@ p1.addForce( correctionHalf );
                 time = 0;
                 document.body.appendChild(renderer.domElement);
                 controls = new THREE.OrbitControls( camera, renderer.domElement );
-                controls.maxPolarAngle = Math.PI * 0.5;
-                
+                controls.maxPolarAngle = Math.PI * 2.0;
+
                 // ground
 
-                var geometry = new THREE.PlaneBufferGeometry(100, 100);
+                var geometry = new THREE.PlaneBufferGeometry(20, 20);
                 var material = new THREE.MeshBasicMaterial({
                 color:'skyblue',
-                side: THREE.DoubleSide
+                side: THREE.DoubleSide,
+								envMap: env,
+								combine: THREE.MixOperation,
+								reflectivity: 0.2
                 });
                 var plane = new THREE.Mesh(geometry, material);
                 plane.position.y = -2;
                 plane.rotation.x = - Math.PI / 2;
-				plane.receiveShadow = true;
+								plane.receiveShadow = true;
                 scene.add(plane);
                 window.addEventListener( 'resize', onWindowResize, false );
 			}
@@ -201,15 +206,15 @@ p1.addForce( correctionHalf );
                 let positionAttribute = new THREE.Float32BufferAttribute(positions, 3);
                 geometry.addAttribute("position", positionAttribute);
             }
-            
+
             function drawPoints() { // draw the point masses
                 let points = new THREE.Points(
                     geometry,
                     new THREE.PointsMaterial({ size: 0.04 })
                 );
-                scene.add(points);
+                // scene.add(points);
             }
-            
+
             function drawWireframe() { // draw lines connecting the masses
                 let indexPairs = [];
                 for (let i = 0; i < n; i++) {
@@ -235,9 +240,9 @@ p1.addForce( correctionHalf );
                 geometry.setIndex(indexPairs);
                 let lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial());
                 lines.frustumCulled = false;
-                scene.add(lines);
+                // scene.add(lines);
             }
-           
+
             function drawMesh() { // draw mesh over the whole thing
                 let triangles = [];
                 for (let i = 0; i < n; i++) {
@@ -252,7 +257,7 @@ p1.addForce( correctionHalf );
                         triangles.push(mapFrom3D(p.x - 1, p.y, p.z));
                         triangles.push(mapFrom3D(p.x, p.y - 1, p.z));
                     }
-                    
+
                     if (p.y + 1 < ySize && p.z + 1 < zSize) {
                         triangles.push(i);
                         triangles.push(mapFrom3D(p.x, p.y + 1, p.z));
@@ -263,7 +268,7 @@ p1.addForce( correctionHalf );
                         triangles.push(mapFrom3D(p.x, p.y - 1, p.z));
                         triangles.push(mapFrom3D(p.x, p.y, p.z - 1));
                     }
-                    
+
                     if (p.x + 1 < xSize && p.z + 1 < zSize) {
                         triangles.push(i);
                         triangles.push(mapFrom3D(p.x + 1, p.y, p.z));
@@ -277,7 +282,12 @@ p1.addForce( correctionHalf );
                 }
 
                 geometry.setIndex(triangles);
-                let mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color: 'crimson', side: THREE.DoubleSide}));
+                let mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+									color: 'crimson',
+									side: THREE.DoubleSide,
+									transparent: true,
+									opacity: 0.9
+								}));
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
                 mesh.frustumCulled = false;
@@ -287,11 +297,11 @@ p1.addForce( correctionHalf );
 
             function simulate(delta) {
                 if (delta < TIMESTEP) return;
-                
+
                 // apply gravity
                 for (let i = 0; i < n; i++) {
                     let copy = new THREE.Vector3().copy(GRAVITY);
-                    particles[i].addForce(copy.multiplyScalar(particles[i].mass)); // need to make a copy                    
+                    particles[i].addForce(copy.multiplyScalar(particles[i].mass)); // need to make a copy
                 }
 
                 // apply springs
@@ -302,7 +312,7 @@ p1.addForce( correctionHalf );
                 }
 
                 for (let i = 0; i < n; i++) {
-                    particles[i].integrate(delta * delta);                 
+                    particles[i].integrate(delta * delta);
                 }
 
                 // floor constraints
@@ -310,13 +320,13 @@ p1.addForce( correctionHalf );
                     let pos = particles[i].position;
                     if (pos.y < -2) {
                         pos.y = -2;
-                    }                
+                    }
                 }
 
                 // satisfy constraints
                 time = 0;
             }
-            
+
             function render() {
                 requestAnimationFrame(render);
                 time += clock.getDelta();
