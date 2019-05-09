@@ -63,6 +63,14 @@
             var K = 1; // spring restoring force
             var restDistance = 1 / xSize; // spring resting length
 
+            // wrapper class for multiple objects
+            function Object(geometry, positions, particles, springs) {
+                this.geometry = geometry;
+                this.positions = positions;
+                this.particles = particles;
+                this.springs = springs;
+            }
+
             // this is just a wrapper class for the Points so we can store previous positions and forces more easily
             function Particle(x, y, z, mass) {
                 this.position = new THREE.Vector3();
@@ -167,7 +175,17 @@ p1.addForce( correctionHalf );
                 plane.rotation.x = - Math.PI / 2;
 				plane.receiveShadow = true;
                 scene.add(plane);
-            }            
+                window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
         
             function generatePoints() { // create the point masses for the structure
                 for (let i = 0; i < n; i++) {
@@ -263,7 +281,7 @@ p1.addForce( correctionHalf );
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
                 mesh.frustumCulled = false;
-
+                
                 scene.add(mesh);
             }
 
@@ -312,6 +330,8 @@ p1.addForce( correctionHalf );
                 geometry.attributes.position.needsUpdate = true;
                 renderer.render(scene, camera);
             }
+
+           
 
             // main code
 
