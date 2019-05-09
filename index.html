@@ -157,18 +157,26 @@
 								env.encoding = THREE.sRGBEncoding;
                 camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight);
                 camera.position.set(-7, -1.5, -1);
-                camera.lookAt(scene.position);
+                // camera.lookAt(scene.position);
                 renderer = new THREE.WebGLRenderer({ antialias: true });
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 clock = new THREE.Clock();
                 time = 0;
                 document.body.appendChild(renderer.domElement);
                 controls = new THREE.OrbitControls( camera, renderer.domElement );
-                controls.maxPolarAngle = Math.PI * 2.0;
+								controls.minAzimuthAngle = 0.0;
+								controls.maxAzimuthAngle = 0.0;
+								controls.minPolarAngle = 0.0;
+                controls.maxPolarAngle = Math.PI * 0.50
+								controls.minDistance = 5;
+								controls.maxDistance = 10;
+								// controls.maxPolarAngle = 0.0;
 
+								document.addEventListener('click', onClick, false);
+								// var mouse = new THREE.Vector3( 0, 0, 0.5 );
                 // ground
 
-                var geometry = new THREE.PlaneBufferGeometry(20, 20);
+                var geometry = new THREE.PlaneBufferGeometry(20, 5);
                 var material = new THREE.MeshBasicMaterial({
                 color:'skyblue',
                 side: THREE.DoubleSide,
@@ -184,15 +192,38 @@
                 window.addEventListener( 'resize', onWindowResize, false );
 			}
 
-			function onWindowResize() {
+						function onWindowResize() {
 
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
+							camera.aspect = window.innerWidth / window.innerHeight;
+							camera.updateProjectionMatrix();
 
-				renderer.setSize( window.innerWidth, window.innerHeight );
+							renderer.setSize( window.innerWidth, window.innerHeight );
 
-			}
-        
+						}
+
+						function onClick() {
+										var x = ( event.clientX / window.innerWidth ) * 2 - 1;
+										var y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+										let softBody = new SoftBody(new THREE.BufferGeometry(), [], [], x);
+		                softBody.geometry.dynamic = true;
+		                generatePoints(x*8, -y*8, 0, softBody.geometry, softBody.particles);
+
+		                drawPoints(softBody.geometry); // geometry
+		                drawWireframe(softBody.geometry, softBody.particles, softBody.springs); // also form the springs
+		                drawMesh(softBody.geometry);
+		                objects.push(softBody);
+							// for (let i = 1; i < 5; i++) {
+	            //     let softBody = new SoftBody(new THREE.BufferGeometry(), [], [], i);
+	            //     softBody.geometry.dynamic = true;
+	            //     generatePoints(i, i, i, softBody.geometry, softBody.particles);
+							//
+	            //     drawPoints(softBody.geometry); // geometry
+	            //     drawWireframe(softBody.geometry, softBody.particles, softBody.springs); // also form the springs
+	            //     drawMesh(softBody.geometry);
+	            //     objects.push(softBody);
+	            // }
+						}
+
             function generatePoints(x_offs, y_offs, z_offs, geometry, particles) { // create the point masses for the structure
                 let positions = [];
                 for (let i = 0; i < n; i++) {
@@ -293,7 +324,7 @@
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
                 mesh.frustumCulled = false;
-                
+
                 scene.add(mesh);
             }
 
@@ -336,9 +367,9 @@
 
                 for (let x = 0; x < objects.length; x++) {
                     let sb = objects[x];
-                    
+
                     simulate(time, sb.particles, sb.springs);
-                    
+
                     for (let i = 0; i < n; i++) {
                         let pos = sb.particles[i].position;
                         sb.geometry.attributes.position.array[3 * i + 0] = pos.x;
@@ -356,21 +387,29 @@
                 renderer.render(scene, camera);
             }
 
-        
+
             // main code
 
             init();
 
-            for (let i = 0; i < 5; i++) {
-                let softBody = new SoftBody(new THREE.BufferGeometry(), [], [], i);
-                softBody.geometry.dynamic = true;
-                generatePoints(i, i, i, softBody.geometry, softBody.particles);
+            // for (let i = 0; i < 5; i++) {
+            //     let softBody = new SoftBody(new THREE.BufferGeometry(), [], [], i);
+            //     softBody.geometry.dynamic = true;
+            //     generatePoints(i, i, i, softBody.geometry, softBody.particles);
+						//
+            //     drawPoints(softBody.geometry); // geometry
+            //     drawWireframe(softBody.geometry, softBody.particles, softBody.springs); // also form the springs
+            //     drawMesh(softBody.geometry);
+            //     objects.push(softBody);
+            // }
+						let main_softBody = new SoftBody(new THREE.BufferGeometry(), [], [], 0);
+						main_softBody.geometry.dynamic = true;
+						generatePoints(0, 0, 0, main_softBody.geometry, main_softBody.particles);
 
-                drawPoints(softBody.geometry); // geometry
-                drawWireframe(softBody.geometry, softBody.particles, softBody.springs); // also form the springs
-                drawMesh(softBody.geometry);
-                objects.push(softBody);
-            }
+						drawPoints(main_softBody.geometry); // geometry
+						drawWireframe(main_softBody.geometry, main_softBody.particles, main_softBody.springs); // also form the springs
+						drawMesh(main_softBody.geometry);
+						objects.push(main_softBody);
             render();
 
 		</script>
