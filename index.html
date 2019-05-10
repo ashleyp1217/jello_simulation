@@ -55,11 +55,6 @@
             var ySize = 4;
             var zSize = 4;
             var n = xSize * ySize * zSize; // number of point masses
-            // var geometry = new THREE.BufferGeometry();
-            // geometry.dynamic = true;
-            // var positions = []; // the positions of point masses in strides of 3
-            // var particles = []; // particles wrapper class
-            // var springs = []; // springs wrapper class
             var objects = [];
 
 
@@ -67,7 +62,7 @@
             var GRAVITY = new THREE.Vector3(0, -.98, 0); // -9.8 m/s^2
             var TIMESTEP = 1/60; // time interval in seconds between each update (60 fps => 1 / 60 seconds per update)
             var MASS = 0.01; // mass of each point mass
-            var DAMPING = 0.04; // simulate energy loss
+            var DAMPING = 0.07; // simulate energy loss
             var K = 1; // spring restoring force
             var restDistance = 1 / xSize; // spring resting length
             var collDistance = restDistance / xSize; // distance at which we register a "collision"
@@ -127,17 +122,31 @@
                 }
 
                 if (box1.intersectsBox(box2)) {
-                    for (let i = 0; i < n; i++) {
+                    // let diff = new THREE.Vector3().subVectors(box2.max, box1.max).multiplyScalar(1/64);
+
+                    for (let i = 0; i < sb.particles.length; i++) {
                         let pos = sb.particles[i].position;
-                        if (pos.y < box1.max.y) {
-                            pos.y = box1.max.y;
+                        let diff = new THREE.Vector3().subVectors(box2.max, pos).multiplyScalar(1/32);
+
+                   
+                        if (box1.containsPoint(pos)) {
+                            // pos.x = Math.max(pos.x, box1.max.x + 0.001);
+                            pos.y = Math.max(pos.y, box1.max.y + 0.001);
+
+                            // pos.z = Math.max(pos.z, box1.max.z + 0.001);
                         }
+                        sb.particles[i].addForce(diff);
+
+                       
                     }
+                    // sb.addForce(diff);
+
                 }
             }
 
             // apply a force uniformly onto a softbody
             SoftBody.prototype.addForce = function (force) {
+                console.log(force);
                 for (let i = 0; i < this.particles.length; i++) {
                     this.particles[i].addForce(force);
                 }
@@ -181,35 +190,21 @@
                 this.forces.set(0, 0, 0); // reset forces
             }
 
-            // collide a particle with another
-            // Particle.prototype.collide = function (particle) {
-            //     let diff = new THREE.Vector3();
-            //     diff.subVectors(particle.position, this.position)
-            //     let distance = diff.length();
-            //     console.log(distance, collDistance);
-
-            //     if (distance <  collDistance) {
-            //         console.log(distance, collDistance);
-            //         let correction = distance - collDistance;
-            //         diff = diff.normalize();
-            //         particle.position.add(diff.multiplyScalar(correction * 0.5));
-            //         this.position.sub(diff.multiplyScalar(correction * 0.5));
-            //     }
-            // }
-
             function satisfyConstraints( p1, p2, distance ) {
                 let diff = new THREE.Vector3();
-								diff.subVectors( p2.position, p1.position );
-								var currentDist = diff.length();
-								if ( currentDist === 0 ) return; // prevents division by 0
-								currentDist *= K;
-								var correction = diff.multiplyScalar( 1 - distance / currentDist );
-								var correctionHalf = correction.multiplyScalar( 0.5 );
-								p1.addForce( correctionHalf );
+                diff.subVectors( p2.position, p1.position );
+                var currentDist = diff.length();
+                if ( currentDist === 0 ) return; // prevents division by 0
+                currentDist *= K;
+                // console.log(1 - distance / currentDist);
+                var correction = diff.multiplyScalar( 1 - distance / currentDist );
+                var correctionHalf = correction.multiplyScalar( 0.5 );
+                p1.addForce( correctionHalf );
                 correctionHalf.negate() // add inverse
                 p2.addForce(correctionHalf);
 
-}
+            }
+
             function mapTo3D(i) {
                 let z = Math.floor(i / (xSize * ySize));
                 i -= z * xSize * ySize;
@@ -265,8 +260,8 @@
                 time = 0;
                 document.body.appendChild(renderer.domElement);
                 controls = new THREE.OrbitControls( camera, renderer.domElement );
-								controls.minAzimuthAngle = 0.0;
-								controls.maxAzimuthAngle = 0.0;
+								// controls.minAzimuthAngle = 0.0;
+								// controls.maxAzimuthAngle = 0.0;
 								controls.minPolarAngle = Math.PI * 0.50;
                 controls.maxPolarAngle = Math.PI * 0.50;
 								controls.minDistance = 7;
@@ -356,7 +351,7 @@
                     geometry,
                     new THREE.PointsMaterial({ size: 0.04 })
                 );
-                //scene.add(points);
+                // scene.add(points);
             }
 
             function drawWireframe(geometry, particles, springs) { // draw lines connecting the masses
@@ -380,11 +375,53 @@
                         springs.push(new Spring(particles[i], particles[mapFrom3D(p.x, p.y, p.z + 1)], restDistance));
 
                     }
+
+                    // add some shearing too
+                    if (p.x + 1 < xSize && p.y + 1 < ySize) {
+                        indexPairs.push(i);
+                        indexPairs.push(mapFrom3D(p.x + 1, p.y + 1, p.z));
+                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x + 1, p.y + 1, p.z)], 1.41421356237
+ * restDistance));
+                    }
+
+                    if (p.x > 0 && p.y + 1 < ySize) {
+                        indexPairs.push(i);
+                        indexPairs.push(mapFrom3D(p.x - 1, p.y + 1, p.z));
+                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x - 1, p.y + 1, p.z)], 1.41421356237
+ * restDistance));
+                    }
+                    if (p.y + 1 < ySize && p.z + 1 < zSize) {
+                        indexPairs.push(i);
+                        indexPairs.push(mapFrom3D(p.x, p.y + 1, p.z + 1));
+                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x, p.y + 1, p.z + 1)],1.41421356237
+ * restDistance));
+                    }
+ if (p.y > 0 && p.z + 1 < zSize) {
+                        indexPairs.push(i);
+                        indexPairs.push(mapFrom3D(p.x, p.y - 1, p.z + 1));
+                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x, p.y - 1, p.z + 1)],1.41421356237
+ * restDistance));
+
+                    }
+                    if (p.x + 1 < xSize && p.z + 1 < zSize) {
+                        indexPairs.push(i);
+                        indexPairs.push(mapFrom3D(p.x + 1, p.y, p.z + 1));
+                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x + 1, p.y, p.z + 1)], 1.41421356237
+*  restDistance));
+
+                    }
+
+                    if (p.x > 0 && p.z + 1 < zSize) {
+                        indexPairs.push(i);
+                        indexPairs.push(mapFrom3D(p.x - 1, p.y, p.z + 1));
+                        springs.push(new Spring(particles[i], particles[mapFrom3D(p.x - 1, p.y, p.z + 1)],1.41421356237
+ * restDistance));
+                    }
                 }
                 geometry.setIndex(indexPairs);
                 let lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial());
                 lines.frustumCulled = false;
-                // scene.add(lines);
+                scene.add(lines);
             }
 
             function drawMesh(geometry) { // draw mesh over the whole thing
@@ -476,7 +513,7 @@
                 for (let x = 0; x < objects.length; x++) {
                     let sb = objects[x];
 
-                    simulate(time, sb.particles, sb.springs);
+                    simulate(time * 1.7, sb.particles, sb.springs);
 
                     for (let i = 0; i < n; i++) {
                         let pos = sb.particles[i].position;
@@ -503,14 +540,17 @@
             // main code
 
             init();
-            let main_softBody = new SoftBody(new THREE.BufferGeometry(), [], [], 0);
-            main_softBody.geometry.dynamic = true;
-            generatePoints(0, 0, 0, main_softBody.geometry, main_softBody.particles);
+            for (let i = 0; i< 3; i++) {
+                let main_softBody = new SoftBody(new THREE.BufferGeometry(), [], [], 0);
+                main_softBody.geometry.dynamic = true;
+                
+                generatePoints(i * 0.5, i, 0, main_softBody.geometry, main_softBody.particles);
 
-            drawPoints(main_softBody.geometry); // geometry
-            drawWireframe(main_softBody.geometry, main_softBody.particles, main_softBody.springs); // also form the springs
-            drawMesh(main_softBody.geometry);
-            objects.push(main_softBody);
+                drawPoints(main_softBody.geometry); // geometry
+                drawWireframe(main_softBody.geometry, main_softBody.particles, main_softBody.springs); // also form the springs
+                drawMesh(main_softBody.geometry);
+                objects.push(main_softBody);
+            }
             render();
 
 		</script>
