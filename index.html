@@ -56,6 +56,7 @@
             // var springs = []; // springs wrapper class
             var objects = [];
 
+
             // physics variables
             var GRAVITY = new THREE.Vector3(0, -.98, 0); // -9.8 m/s^2
             var TIMESTEP = 1/60; // time interval in seconds between each update (60 fps => 1 / 60 seconds per update)
@@ -63,6 +64,7 @@
             var DAMPING = 0.04; // simulate energy loss
             var K = 1; // spring restoring force
             var restDistance = 1 / xSize; // spring resting length
+            var collDistance = restDistance / xSize; // distance at which we register a "collision" 
 
             // the wrapper class for jellos
             function SoftBody(geometry, particles, springs, id) {
@@ -70,6 +72,37 @@
                 this.particles = particles;
                 this.springs = springs;
                 this.id = id;
+            }
+
+            SoftBody.prototype.collide = function (sb) {
+                this.geometry.computeBoundingBox();
+                sb.geometry.computeBoundingBox();
+
+                let box1 = this.geometry.boundingBox;
+                let box2 = sb.geometry.boundingBox;
+
+                // console.log(box1.max.y, box2.max.y);
+                if (box1.max.y > box2.max.y) {
+                    let temp = box1;
+                    box1 = box2;
+                    box2 = temp; // rip no es6
+                }
+
+                if (box1.intersectsBox(box2)) {
+                    for (let i = 0; i < n; i++) {
+                        let pos = sb.particles[i].position;
+                        if (pos.y < box1.max.y) {
+                            pos.y = box1.max.y;
+                        }
+                    }
+                }
+            }
+
+            // apply a force uniformly onto a softbody
+            SoftBody.prototype.addForce = function (force) {
+                for (let i = 0; i < this.particles.length; i++) {
+                    this.particles[i].addForce(force);
+                }
             }
 
             // this is just a wrapper class for the Points so we can store previous positions and forces more easily
@@ -110,6 +143,22 @@
                 this.forces.set(0, 0, 0); // reset forces
             }
 
+            // collide a particle with another
+            // Particle.prototype.collide = function (particle) {
+            //     let diff = new THREE.Vector3();
+            //     diff.subVectors(particle.position, this.position)
+            //     let distance = diff.length();
+            //     console.log(distance, collDistance);
+
+            //     if (distance <  collDistance) {
+            //         console.log(distance, collDistance);
+            //         let correction = distance - collDistance;
+            //         diff = diff.normalize();
+            //         particle.position.add(diff.multiplyScalar(correction * 0.5));
+            //         this.position.sub(diff.multiplyScalar(correction * 0.5));
+            //     }
+            // }
+
             function satisfyConstraints( p1, p2, distance ) {
                 let diff = new THREE.Vector3();
 								diff.subVectors( p2.position, p1.position );
@@ -146,12 +195,12 @@
 									'negz.jpg'
 								] );
                 scene = new THREE.Scene();
-								// fogColor = new THREE.Color(0xd3746e);
+								fogColor = new THREE.Color(0xd3746e);
 
     						// scene.background = new THREE.Color(0xffffff);
     						// scene.fog = new THREE.Fog(fogColor, 0.0025, 20);
                 // scene.fog = new THREE.FogExp2(0x000000, 0.6);
-								scene.background = env;
+								// scene.background = env;
 								env.format = THREE.RGBFormat;
 								env.mapping = THREE.CubeReflectionMapping;
 								env.encoding = THREE.sRGBEncoding;
@@ -159,12 +208,34 @@
                 camera.position.set(-7, -1.5, -1);
                 camera.lookAt(scene.position);
                 renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setClearColor( 0xbfd1e5 );
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 clock = new THREE.Clock();
                 time = 0;
                 document.body.appendChild(renderer.domElement);
                 controls = new THREE.OrbitControls( camera, renderer.domElement );
                 controls.maxPolarAngle = Math.PI * 2.0;
+
+                // var ambientLight = new THREE.AmbientLight( 0x404040 );
+				// scene.add( ambientLight );
+
+                // var light = new THREE.DirectionalLight( 0xffffff, 1 );
+                // light.position.set( -10, 10, 5 );
+				// light.castShadow = true;
+				// var d = 20;
+			    // 			    light.shadow.camera.left = -d;
+			    // light.shadow.camera.right = d;
+			    // light.shadow.camera.top = d;
+			    // light.shadow.camera.bottom = -d;
+
+			    // light.shadow.camera.near = 2;
+			    // light.shadow.camera.far = 50;
+
+			    // light.shadow.mapSize.x = 1024;
+			    // light.shadow.mapSize.y = 1024;
+
+                // scene.add( light );
+
 
                 // ground
 
@@ -334,6 +405,7 @@
 
                 if (time < TIMESTEP) return;
 
+                // let all_particles = []; // HOLY FK THIS TIME EFFICIENCY
                 for (let x = 0; x < objects.length; x++) {
                     let sb = objects[x];
                     
@@ -344,6 +416,10 @@
                         sb.geometry.attributes.position.array[3 * i + 0] = pos.x;
                         sb.geometry.attributes.position.array[3 * i + 1] = pos.y;
                         sb.geometry.attributes.position.array[3 * i + 2] = pos.z;
+                        // all_particles.push(sb.particles[i]);
+                    }
+                    for (let y = x+1; y < objects.length; y++) {
+                        sb.collide(objects[y]);
                     }
                     sb.geometry.attributes.position.needsUpdate = true;
                 }
@@ -361,10 +437,10 @@
 
             init();
 
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 2; i++) {
                 let softBody = new SoftBody(new THREE.BufferGeometry(), [], [], i);
                 softBody.geometry.dynamic = true;
-                generatePoints(i, i, i, softBody.geometry, softBody.particles);
+                generatePoints(0, i, 0, softBody.geometry, softBody.particles);
 
                 drawPoints(softBody.geometry); // geometry
                 drawWireframe(softBody.geometry, softBody.particles, softBody.springs); // also form the springs
