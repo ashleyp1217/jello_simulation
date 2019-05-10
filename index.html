@@ -56,22 +56,25 @@
             var zSize = 4;
             var n = xSize * ySize * zSize; // number of point masses
             var objects = [];
+						var all_lines = [];
+						var all_mesh = [];
 
 
             // physics variables
             var GRAVITY = new THREE.Vector3(0, -.98, 0); // -9.8 m/s^2
             var TIMESTEP = 1/60; // time interval in seconds between each update (60 fps => 1 / 60 seconds per update)
             var MASS = 0.01; // mass of each point mass
-            var DAMPING = 0.07; // simulate energy loss
+            var DAMPING = 0.1; // simulate energy loss
             var K = 1; // spring restoring force
             var restDistance = 1 / xSize; // spring resting length
             var collDistance = restDistance / xSize; // distance at which we register a "collision"
 						var raycaster = new THREE.Raycaster();
-
+						var lines = new THREE.LineSegments();
+						var mesh = new THREE.MeshBasicMaterial;
 
 
 						var jellomat = new THREE.MeshBasicMaterial({
-							color: 'crimson',
+							color: 'lightcoral',
 							side: THREE.DoubleSide,
 							transparent: true,
 							opacity: 0.75,
@@ -85,19 +88,66 @@
 				    height : 5 * 32 - 1
 						});
 
-						var box = gui.addFolder('Jiggliness');
+						// var box = gui.addFolder('Jiggliness');
 						// box.add(this.GRAVITY,'y', -3.5, -.98, 0.01).name('Gravity').listen();
-						box.add(this,'MASS', 0.0, 0.01, 0.001).name('Mass').listen();
+						// box.add(this,'MASS', 0.0, 0.01, 0.001).name('Mass').listen();
 						var params = {
-						  color: '#FF0000', // CSS string
+							begin: first_jellos,
+						  color: '#d3746e', // CSS string
+							Wireframe: false,
+							Mesh: true,
+							reset: reset_jello
 						};
+						gui.add(params,'begin').name('Start Jellos');
+
 						gui.addColor( params, 'color' ).name('Jello Color')
       .onChange( function() { jellomat.color.set( params.color ); } );
+
+						gui.add(params, 'Wireframe').onChange(function() {frame(params.Wireframe);});
+						gui.add(params, 'Mesh').onChange(function() {meshtog(params.Mesh);});
+						gui.add(params,'reset').name('Reset Jellos');
+
 
 						// box.add(this,'DAMPING', 0, 1, 0.01).name('damping').listen();
 						// box.add(this,'K', 1, 1.5, 0.1).name('k').listen();
 						// box.open();
+						function frame(boo){
+							if (boo){
+								for (let i = 0; i<all_lines.length; i++){
+									scene.add(all_lines[i])
+								}
+								// scene.add(lines);
+							}
+							else{
+								for (let i = 0; i<all_lines.length; i++){
+									scene.remove(all_lines[i])
+								}
+							}
+						}
 
+						function meshtog(boo){
+							if (boo){
+								for (let i = 0; i<all_mesh.length; i++){
+									scene.add(all_mesh[i])
+								}
+							}
+							else{
+								for (let i = 0; i<all_mesh.length; i++){
+									scene.remove(all_mesh[i])
+								}
+							}
+						}
+						function reset_jello(){
+							while(objects.length > 0){
+    							scene.remove(objects[0]);
+									scene.remove(all_mesh[0]);
+									scene.remove(all_lines[0]);
+
+									objects.shift();
+									all_mesh.shift();
+									all_lines.shift();
+							}
+						}
 
             // the wrapper class for jellos
             function SoftBody(geometry, particles, springs, id) {
@@ -105,6 +155,7 @@
                 this.particles = particles;
                 this.springs = springs;
                 this.id = id;
+
             }
 
             SoftBody.prototype.collide = function (sb) {
@@ -128,7 +179,7 @@
                         let pos = sb.particles[i].position;
                         let diff = new THREE.Vector3().subVectors(box2.max, pos).multiplyScalar(1/32);
 
-                   
+
                         if (box1.containsPoint(pos)) {
                             // pos.x = Math.max(pos.x, box1.max.x + 0.001);
                             pos.y = Math.max(pos.y, box1.max.y + 0.001);
@@ -137,7 +188,7 @@
                         }
                         sb.particles[i].addForce(diff);
 
-                       
+
                     }
                     // sb.addForce(diff);
 
@@ -164,7 +215,6 @@
                 this.previous.set(x, y, z);
                 this.original.set(x, y, z);
             }
-
             // spring wrapper class
             function Spring(p1, p2, restDistance) {
                 this.p1 = p1;
@@ -219,33 +269,33 @@
 
             function init() {
 								// texture = new THREE.TextureLoader().load( "checker.png");
-								var env = new THREE.CubeTextureLoader().load( [
-									'/Tantolunden6/posx.jpg',
-									'/Tantolunden6/negx.jpg',
-									'/Tantolunden6/posy.jpg',
-									'/Tantolunden6/negy.jpg',
-									'/Tantolunden6/posz.jpg',
-									'/Tantolunden6/negz.jpg'
-								] );
-								var beach = new THREE.CubeTextureLoader().load( [
-									'/NissiBeach2/posx.jpg',
-									'/NissiBeach2/negx.jpg',
-									'/NissiBeach2/posy.jpg',
-									'/NissiBeach2/negy.jpg',
-									'/NissiBeach2/posz.jpg',
-									'/NissiBeach2/negz.jpg'
-								] );
-								beach.format = THREE.RGBFormat;
-								beach.mapping = THREE.CubeReflectionMapping;
-								beach.encoding = THREE.sRGBEncoding;
+								// var env = new THREE.CubeTextureLoader().load( [
+								// 	'/Tantolunden6/posx.jpg',
+								// 	'/Tantolunden6/negx.jpg',
+								// 	'/Tantolunden6/posy.jpg',
+								// 	'/Tantolunden6/negy.jpg',
+								// 	'/Tantolunden6/posz.jpg',
+								// 	'/Tantolunden6/negz.jpg'
+								// ] );
+								// var beach = new THREE.CubeTextureLoader().load( [
+								// 	'/NissiBeach2/posx.jpg',
+								// 	'/NissiBeach2/negx.jpg',
+								// 	'/NissiBeach2/posy.jpg',
+								// 	'/NissiBeach2/negy.jpg',
+								// 	'/NissiBeach2/posz.jpg',
+								// 	'/NissiBeach2/negz.jpg'
+								// ] );
+								// beach.format = THREE.RGBFormat;
+								// beach.mapping = THREE.CubeReflectionMapping;
+								// beach.encoding = THREE.sRGBEncoding;
 
                 scene = new THREE.Scene();
-								fogColor = new THREE.Color(0xd3746e);
+								// fogColor = new THREE.Color(0xd3746e);
 
-    						// scene.background = new THREE.Color(0xffffff);
+    						scene.background = new THREE.Color(0xffffff);
     						// scene.fog = new THREE.Fog(fogColor, 0.0025, 20);
                 // scene.fog = new THREE.FogExp2(0x000000, 0.6);
-								scene.background = env;
+								// scene.background = env;
 
 								// env.format = THREE.RGBFormat;
 								// env.mapping = THREE.CubeReflectionMapping;
@@ -262,9 +312,9 @@
                 controls = new THREE.OrbitControls( camera, renderer.domElement );
 								// controls.minAzimuthAngle = 0.0;
 								// controls.maxAzimuthAngle = 0.0;
-								controls.minPolarAngle = Math.PI * 0.50;
+								controls.minPolarAngle = -Math.PI;
                 controls.maxPolarAngle = Math.PI * 0.50;
-								controls.minDistance = 7;
+								controls.minDistance = 0;
 								controls.maxDistance = 7;
 
 								document.addEventListener('dblclick', onClick, false);
@@ -273,9 +323,9 @@
 
                 var geometry = new THREE.PlaneBufferGeometry(20, 5);
                 var material = new THREE.MeshBasicMaterial({
-                color:'white',
+                color:'gainsboro',
                 side: THREE.DoubleSide,
-								envMap: beach,
+								// envMap: beach,
 								combine: THREE.MixOperation,
 								reflectivity: 0.2
                 });
@@ -303,31 +353,17 @@
 						function onClick() {
 										var x = ( event.clientX / window.innerWidth ) * 2 - 1;
 										var y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-										// var mouseCoords = new THREE.Vector2();
-										// mouseCoords.set(x,y);
-										// raycaster.setFromCamera(mouseCoords, camera );
-										// var loc = new THREE.Vector3();
-										// loc.copy( raycaster.ray.direction );
-										// loc.add( raycaster.ray.origin );
+
 										let softBody = new SoftBody(new THREE.BufferGeometry(), [], [], x*y);
 		                softBody.geometry.dynamic = true;
-		                generatePoints(x*8, y, 0, softBody.geometry, softBody.particles);
+		                generatePoints(-x*8, y, -1, softBody.geometry, softBody.particles);
 										// generatePoints(loc.x, loc.y, 0, softBody.geometry, softBody.particles);
 
 		                drawPoints(softBody.geometry); // geometry
 		                drawWireframe(softBody.geometry, softBody.particles, softBody.springs); // also form the springs
 		                drawMesh(softBody.geometry);
 		                objects.push(softBody);
-							// for (let i = 1; i < 5; i++) {
-	            //     let softBody = new SoftBody(new THREE.BufferGeometry(), [], [], i);
-	            //     softBody.geometry.dynamic = true;
-	            //     generatePoints(i, i, i, softBody.geometry, softBody.particles);
-							//
-	            //     drawPoints(softBody.geometry); // geometry
-	            //     drawWireframe(softBody.geometry, softBody.particles, softBody.springs); // also form the springs
-	            //     drawMesh(softBody.geometry);
-	            //     objects.push(softBody);
-	            // }
+
 						}
 
             function generatePoints(x_offs, y_offs, z_offs, geometry, particles) { // create the point masses for the structure
@@ -381,7 +417,7 @@
                         indexPairs.push(i);
                         indexPairs.push(mapFrom3D(p.x + 1, p.y + 1, p.z));
                         springs.push(new Spring(particles[i], particles[mapFrom3D(p.x + 1, p.y + 1, p.z)], 1.41421356237
- * restDistance));
+* restDistance));
                     }
 
                     if (p.x > 0 && p.y + 1 < ySize) {
@@ -419,9 +455,12 @@
                     }
                 }
                 geometry.setIndex(indexPairs);
-                let lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial());
+                lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({
+	color: 0xd3746e}));
                 lines.frustumCulled = false;
-                scene.add(lines);
+								// lines.color = new THREE.Color(0xd3746e);
+								all_lines.push(lines);
+                // scene.add(lines);
             }
 
             function drawMesh(geometry) { // draw mesh over the whole thing
@@ -468,7 +507,7 @@
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
                 mesh.frustumCulled = false;
-
+								all_mesh.push(mesh);
                 scene.add(mesh);
             }
 
@@ -513,7 +552,7 @@
                 for (let x = 0; x < objects.length; x++) {
                     let sb = objects[x];
 
-                    simulate(time * 1.7, sb.particles, sb.springs);
+                    simulate(time * 1.3, sb.particles, sb.springs);
 
                     for (let i = 0; i < n; i++) {
                         let pos = sb.particles[i].position;
@@ -529,6 +568,19 @@
                 }
                 time = 0;
             }
+						function first_jellos(){
+							for (let i = 0; i< 3; i++) {
+									let main_softBody = new SoftBody(new THREE.BufferGeometry(), [], [], 0);
+									main_softBody.geometry.dynamic = true;
+
+									generatePoints(i * 0.5, i, -1, main_softBody.geometry, main_softBody.particles);
+
+									drawPoints(main_softBody.geometry); // geometry
+									drawWireframe(main_softBody.geometry, main_softBody.particles, main_softBody.springs); // also form the springs
+									drawMesh(main_softBody.geometry);
+									objects.push(main_softBody);
+							}
+						}
 
             function render() {
                 requestAnimationFrame(render);
@@ -537,20 +589,21 @@
             }
 
 
+
             // main code
 
             init();
-            for (let i = 0; i< 3; i++) {
-                let main_softBody = new SoftBody(new THREE.BufferGeometry(), [], [], 0);
-                main_softBody.geometry.dynamic = true;
-                
-                generatePoints(i * 0.5, i, 0, main_softBody.geometry, main_softBody.particles);
-
-                drawPoints(main_softBody.geometry); // geometry
-                drawWireframe(main_softBody.geometry, main_softBody.particles, main_softBody.springs); // also form the springs
-                drawMesh(main_softBody.geometry);
-                objects.push(main_softBody);
-            }
+            // for (let i = 0; i< 3; i++) {
+            //     let main_softBody = new SoftBody(new THREE.BufferGeometry(), [], [], 0);
+            //     main_softBody.geometry.dynamic = true;
+						//
+            //     generatePoints(i * 0.5, i, -1, main_softBody.geometry, main_softBody.particles);
+						//
+            //     drawPoints(main_softBody.geometry); // geometry
+            //     drawWireframe(main_softBody.geometry, main_softBody.particles, main_softBody.springs); // also form the springs
+            //     drawMesh(main_softBody.geometry);
+            //     objects.push(main_softBody);
+            // }
             render();
 
 		</script>
