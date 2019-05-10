@@ -70,7 +70,8 @@
             var DAMPING = 0.04; // simulate energy loss
             var K = 1; // spring restoring force
             var restDistance = 1 / xSize; // spring resting length
-            var collDistance = restDistance / xSize; // distance at which we register a "collision" 
+            var collDistance = restDistance / xSize; // distance at which we register a "collision"
+						var raycaster = new THREE.Raycaster();
 
 
 
@@ -222,7 +223,7 @@
             }
 
             function init() {
-								texture = new THREE.TextureLoader().load( "checker.png");
+								// texture = new THREE.TextureLoader().load( "checker.png");
 								var env = new THREE.CubeTextureLoader().load( [
 									'/Tantolunden6/posx.jpg',
 									'/Tantolunden6/negx.jpg',
@@ -266,12 +267,12 @@
                 controls = new THREE.OrbitControls( camera, renderer.domElement );
 								controls.minAzimuthAngle = 0.0;
 								controls.maxAzimuthAngle = 0.0;
-								controls.minPolarAngle = 0.0;
-                controls.maxPolarAngle = Math.PI * 0.50
-								controls.minDistance = 5;
-								controls.maxDistance = 10;
+								controls.minPolarAngle = Math.PI * 0.50;
+                controls.maxPolarAngle = Math.PI * 0.50;
+								controls.minDistance = 7;
+								controls.maxDistance = 7;
 
-								document.addEventListener('click', onClick, false);
+								document.addEventListener('dblclick', onClick, false);
 								// var mouse = new THREE.Vector3( 0, 0, 0.5 );
                 // ground
 
@@ -307,9 +308,16 @@
 						function onClick() {
 										var x = ( event.clientX / window.innerWidth ) * 2 - 1;
 										var y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-										let softBody = new SoftBody(new THREE.BufferGeometry(), [], [], x);
+										// var mouseCoords = new THREE.Vector2();
+										// mouseCoords.set(x,y);
+										// raycaster.setFromCamera(mouseCoords, camera );
+										// var loc = new THREE.Vector3();
+										// loc.copy( raycaster.ray.direction );
+										// loc.add( raycaster.ray.origin );
+										let softBody = new SoftBody(new THREE.BufferGeometry(), [], [], x*y);
 		                softBody.geometry.dynamic = true;
-		                generatePoints(x*8, -y*8, 0, softBody.geometry, softBody.particles);
+		                generatePoints(x*8, y, 0, softBody.geometry, softBody.particles);
+										// generatePoints(loc.x, loc.y, 0, softBody.geometry, softBody.particles);
 
 		                drawPoints(softBody.geometry); // geometry
 		                drawWireframe(softBody.geometry, softBody.particles, softBody.springs); // also form the springs
@@ -419,16 +427,6 @@
 
                 geometry.setIndex(triangles);
 
-                // let mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
-								// 	color: 'crimson',
-								// 	side: THREE.DoubleSide,
-								// 	transparent: true,
-								// 	opacity: 0.75,
-								// 	// lights: true
-								// 	envMap: env,
-								// 	combine: THREE.MixOperation,
-								// 	reflectivity: 0.1
-								// }));
 								let mesh = new THREE.Mesh(geometry,jellomat);
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
