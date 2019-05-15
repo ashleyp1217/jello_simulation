@@ -1,0 +1,230 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+    div.padded {
+      padding-top: 0px;
+      padding-right: 100px;
+      padding-bottom: 0.25in;
+      padding-left: 100px;
+    }
+
+    body {
+      font-family:Verdana, Geneva, sans-serif;
+      font-size:14px;
+    }
+  </style>
+<title>it's raining jello :0</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+    <div class="padded">
+<p style = "color:#FDC731; font-family:Verdana, Geneva, sans-serif; font-size:14px;" align="middle">CS184 Spring 2019 Final Project</p>
+
+
+
+      <div align="center">
+          <table style="width=100%">
+                <tr>
+                  <td align="middle">
+                    <img src="images/title.png" width="100px" />
+                    <figcaption style = "color:white; font-family:Impact, sans-serif; font-size:100px;" align="middle">.</figcaption>
+                  </td>
+                  <td align="middle">
+                    <img src="images/title.png" width="100px" />
+                    <figcaption style = "color:#FF6565; font-family:Impact, sans-serif; font-size:100px;" align="middle">J E L L O</figcaption>
+                  </td>
+                  <td align="middle">
+                    <img src="images/title.png" width="100px" />
+                    <figcaption style = "color:white; font-family:Impact, sans-serif; font-size:100px;" align="middle">.</figcaption>
+                  </td>
+                </tr>
+            </table>
+        </div>
+
+<p style = "color:#FDC731; font-family:Verdana, Geneva, sans-serif; font-size:14px;" align="middle">Derrick Li&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Tiffany Ho&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Ashley Park</p>
+  <br style = "color:#FF6565;"></br>
+<hr></hr>
+        <h2 style = "color:#FF6565; font-family:Impact, sans-serif; font-size:40px;" align="left">Abstract</h2>
+      <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">
+          <image style = "margin-right: 20px; margin-bottom: 20px;" src="images/giphy.gif" align="left" width="300px"/>
+         For our final project we made jello! We were inspired by an iconic prank from the TV show "The Office" where Jim puts Dwight's stapler in jello. Originally we wanted to recreate this prank entirely, but after submitting our proposal we realized that figuring out the mechanics of jello, the static object (the stapler), as well as the interactions between them was beyond the scope of our capabilities. So, we scaled things back a bit and decided to replicate the glossly look and jiggly movement of a gelatinous cube, allowing us to focus more on the physical properties of gelatin. We started off by looking at Project 4: Cloth Simulation's use of a point-mass and spring model, and ultimately created a scene in which cubes of jello fall onto a plane. The cubes' interactions with the plane as well as other cubes demonstrate the jiggliness of gelatin.  </p>
+
+
+<br></br>
+      <h2 style = "color:#FF6565; font-family:Impact, sans-serif; font-size:40px;" align="left">Technical Approach</h2>
+      <h2 style = "color:#FF6565; font-family:Impact, sans-serif; font-size:20px;" align="left">Attempt 1: Repurposing Project 4 Cloth Simulation</h2>
+          <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">We started by altering and adding to Project 4's code. We were able to add a third dimension to the mass and spring model and play around with the spring constraints to create a cube with the ability to jiggle. We also tried to create a custom shader for our jello that would combine reflection, refraction, Blinn Phong, and Beer's Law (increase opacity as distance between object and camera increases) . Unfortunately, there was a lot of overhead with the Project 4 code that we didn't have a complete understanding of that made it difficult for us to make changes and apply it to our idea.</p>
+
+          <div align="middle">
+            <image src="images/attempt1.png" align="bottom" width="300px"/>
+          </div>
+
+          <div align="middle">
+            <table style="width=100%">
+              <tr>
+                <td>
+                  <img src="images/184shader1.png" align="middle" height="150px"/>
+                </td>
+                <td>
+                  <img src="images/184shader2.png" align="middle" height="150px"/>
+                </td>
+                <td>
+                  <img src="images/184shader3.png" align="middle" height="150px"/>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <h2 style = "color:#FF6565; font-family:Impact, sans-serif; font-size:20px;" align="left">Attempt 2: Building our own OpenGl simulation</h2>
+              <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">We also tried starting from scratch and making our own OpenGL jello simulation. Although we were able to create some scenes, we realized that rebuilding everything ourselves would take too much time.</p>
+
+              <div align="middle">
+                <image src="images/openGL.png" align="bottom" width="200px"/>
+              </div>
+
+              <h2 style = "color:#FF6565; font-family:Impact, sans-serif; font-size:20px;" align="left">Attempt 3 ( Final ) : Using Three.JS and WebGL</h2>
+                  <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">Ultimately we ended up using the three.js Javascript library and WebGL to create our scene. There was a much easier learning curve that allowed us to focus on the graphical components without worrying about boilerplate.</p>
+
+
+
+                  <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">
+                    Conceptually our jello cubes use the same idea as the Cloth Simulation project but applied in three dimensions. We created a 3D lattice of spring masses and applied Verlet Integration and Hooke's law to simulate motion and physics. We visualized the jello by drawing a grouped mesh of many triangles. By doing this we can easily show the flexibility and bounciness of gelatin.</p>
+
+                    The techniques and algorithms used include:
+
+                    <ul>
+                      <li>Newton's Second Law of Motion: <code>F = ma.</code> Newton's Second Law of Motion was used to accumulate the
+                      forces acting upon each of the individual point masses in the simulation, such as gravity and collisions. </li>
+                      <li>Hooke's Law: <code>F_s = k_s * (||p_a - p_b|| - l).</code> Hooke's Law was used to calculate spring correction forces
+                      for structural and shearing constraints and apply them to point masses.</li>
+                      <li>Verlet Integration: <code>x_(t+dt) = x_t + v_t * dt + a_t * dt^2.</code> Verlet Integration was used to calculate
+                      the new simulated positions of point masses based on the accumulated forces and time interval.</li>
+                    </ul>
+                     <div align="middle">
+                       <table style="width=100%">
+                         <tr>
+                           <td>
+                             <img src="images/planes.png" align="middle" height="200px"/>
+                           </td>
+                           <td>
+                             <img src="images/triangles.png" align="middle" height="200px"/>
+                           </td>
+                           <td>
+                             <img src="images/falling.png" align="middle" height="200px"/>
+                           </td>
+                         </tr>
+                       </table>
+                     </div>
+
+                     Some problems we encountered and resolved were:
+                     <ul>
+                       <li>Collisions. Collisions were more difficult to handle in this simulation because we couldn't use a simple equation
+                       like the sphere or plane equations from Project 4. The algorithm we used to detect and handle collisions is as follows:
+                        <ol>
+                          <li>Calculate collisions between bounding boxes of jello cubes. Skip remaining steps if bounding boxes do not collide</li>
+                          <li>If bounding boxes collide, we must apply a different force on each point mass depending on their positions relative
+                            to the other cube. Otherwise, the cube would only move uniformly in one direction (e.g. the whole cube would just bounce upwards).</li>
+                          <li>The equation we used is: <code>F_a = p_a - avg(p_b)</code>, where p_a is the particle position, F_a is force applied on p_a,
+                          and avg(p_b) is the average of particle positions in the other jello cube. In this manner, we apply an unequal force on the
+                          particles of the jello cube, allowing for realistic "tilting" collisions.
+                        </li>
+
+                        </ol>
+                      </li>
+                      <li>Visualization. Connecting the graphics and algorithmic components of the project was one of the most challenging tasks in
+                          our project. Ultimately, we decided to use a mesh of triangles with points centered on the point masses. This allowed us to visualize
+                          the "bending" and "jiggliness" of the jello, and also save performance cost, as the edges are already calculated for us
+                          when we create the structural and shearing springs.
+                        </li>
+                     </ul>
+
+                    <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">
+                      We also wanted to include an interactive component to make
+                      our project more "fun" for the audience. We used Javascript's onClick event methods, DAT.GUI
+                      library, and THREE.OrbitControls to make our scene interactive.
+                    </p>
+                    <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">
+                    We initally implemented an onClick method to allow users to place jellos to "rain" wherever they like. Up to this point,
+                    we only had hardcoded jellos interacting with each other. To allow users to decide new jellos' location, we
+                    had to rewrite our methods to calculate the correct jello vertices based on the onClick mouse's location.
+                  </p>
+                    <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">
+                      DAT.GUI allowed us to provide buttons to toggle certain variables in our code.
+                      We experimented with adding parameters related to the jellos' physics.
+                      We tried to make the K spring constant, damping spring constant,
+                      jello mass and force of gravity to be up to the user. However we realized that these
+                      variables had to specifically set in order for the final result to look realistically like jello.
+                      When we changed our K and damping constants, our jello would oscillate severely and unrealistically in shape.
+                      When we changed the force of gravity and the jello mass, our jello would squash down into a 2d square on the plane
+                      or take forever to fall onto the plane.
+                      After a lot of trial and error, we ended up using the DAT.GUI to only toggle
+                      with the appearance of the jello, instead of the physics of it.
+                    </p>
+                    <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">
+                      In our interactive component, there is a start button for a quick demo of adding three jellos and
+                      a reset button that would delete all the jellos on the screen.
+                      We also provided a color picker for the users to choose the jellos' color and
+                      we had checkboxes that determined whether the jello displayed its wireframe
+                      and mesh or not.
+                      To accomodate for these features, we had to reorganize our code once again.
+                      We had to create arrays that would
+                      represent the individual jellos and their wireframes and meshes that exist in the scene.
+                      To add a jello in the scene (whether from onClick or the start button), we had to make sure
+                      to add it and its wireframe and mesh to the relevant arrays. This way,
+                      we were able use these arrays to make our jello's appearances interactive. Adding or removing wireframes/meshes from the scene requires
+                       looping through the relevant arrays and calling scene.remove/add. To reset, we had to loop through
+                       the main jello array to delete each instance of jello from our simulation.
+                      The color picker feature was simple to implement and did not require reorganizing for the use of arrays.
+                      With Javascript's listen() method,
+                      we made sure that the color variable of the jello's mesh was listening and updating to the color picker's inputs.
+                    </p>
+                    <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">
+
+                      Lastly, we utilized THREE.OrbitControls to make the camera viewing frame to be interactive.
+                      The THREE.OrbitControls allowed us rotate our view to see the top and side of the jello-plane
+                      scene, which aids in the visualization of how our jellos interacted with each other.
+                    </p>
+
+
+
+          <h2 style = "color:#FF6565; font-family:Impact, sans-serif; font-size:40px;" align="left">Results</h2>
+          <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;"> Here is a <a href="https://drive.google.com/file/d/1ZyZv7Z6TG6yt4_JvDiaYS7I366-W1r0y/view">video</a> that showcases our jello simulation! </p>
+          A live version of our simulation can also be found <a href="index.html">here</a>.
+
+          <div align="middle">
+            <image src="images/scene.png" align="bottom" width="1000px"/>
+          </div>          
+
+          <h2 style = "color:#FF6565; font-family:Impact, sans-serif; font-size:40px;" align="left">What We Learned</h2>
+          <p style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">
+              <image style = "margin-right: 20px; margin-bottom: 20px;" src="images/arrow.png" align="left" width="100px"/>
+             In conclusion, this project was a great opportunity for us to showcase what we've been learning throughout the semester. We really enjoyed the creative liberty we were given, and like the other projects we've done for this class, the visual gratification was really satisfying as well. It was fun to be able to apply real physics to our computer graphics. One thing that we learned as a group was just how much physics is behind such small, seemingly simple motions. We brainstormed a lot of ideas that at the time seemed like simple interactions, but as we started building our project, realized just how complicated they were.</p>
+
+<br></br>
+        <h2 style = "color:#FF6565; font-family:Impact, sans-serif; font-size:40px;" align="left">References</h2>
+        <ol style = "font-family:Verdana, Geneva, sans-serif; font-size:14px;">
+          <li>Project 4: Cloth Simulation</li>
+            <li>http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.101.3192&rep=rep1&type=pdf</li>
+            <li>https://www.cs.cmu.edu/~ph/jello/jello.html</li>
+            <li>http://www.cs.cmu.edu/~barbic/prog3.html</li>
+        </ol>
+
+
+        <h2 style = "color:#FDC731; font-family:Impact, sans-serif; font-size:40px;" align="left">Contributions</h2>
+
+        <p style = "font-family:Verdana, Geneva, sans-serif; font-size:12px;">
+           <span style = "font-family:Impact, sans-serif; color:#FDC731; font-size:18px;"><b> Derrick Li </b></span> &nbsp;Created the 3D mass spring model for our gelatin cube, implemented the cubes' collisions with other jello cubes and the plane, made the final project video.</p>
+
+           <p style = "font-family:Verdana, Geneva, sans-serif; font-size:12px;">
+              <span style = "font-family:Impact, sans-serif; color:#FDC731; font-size:18px;"><b> Tiffany Ho </b></span> &nbsp;Made our simulation interactive (mouse-click jello drop, modify colors, toggle wireframe/mesh view, modify camera viewing angle, reset scene), made the milestone status report webpage.</p>
+
+              <p style = "font-family:Verdana, Geneva, sans-serif; font-size:12px;">
+                 <span style = "font-family:Impact, sans-serif; color:#FDC731; font-size:18px;"><b> Ashley Park </b></span> &nbsp;Played with project 4 shaders and focused on the aesthetic properties of gelatin (transparency, reflection, refraction, Beer's Law), made the final report webpage.</p>
+
+
+</div>
+</body>
+</html>
